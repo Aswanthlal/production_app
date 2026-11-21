@@ -15,8 +15,9 @@ import AdminDashboardPage from "./modules/admin/AdminDashboardPage";
 // Global Dialogs & Modals
 import CartDrawer from "./modules/cart/CartDrawer";
 import { PlantDetailModal } from "./modules/catalog/components/PlantDetailModal";
-import { CheckoutModal } from "./modules/cart/CheckoutModal";
-import { OrderConfirmationModal } from "./modules/cart/OrderConfirmationModal";
+import { CheckoutModal } from "./modules/orders/CheckoutModal";
+import { OrderConfirmationView } from "./modules/orders/OrderConfirmationView";
+import { TrackOrderPage } from "./modules/orders/TrackOrderPage";
 import { TrackOrderModal } from "./modules/cart/TrackOrderModal";
 
 export type AppRoute =
@@ -25,7 +26,8 @@ export type AppRoute =
   | "categoryPlants"
   | "trending"
   | "login"
-  | "dashboard";
+  | "dashboard"
+  | "track";
 
 function AppContent() {
   const { adminUsername, logoutAdmin } = useStore();
@@ -52,12 +54,15 @@ function AppContent() {
         setSelectedCategoryId(param);
       }
       setRoute("categoryPlants");
+    } else if (newRoute === "track" || newRoute === "track-order") {
+      setRoute("track");
     } else if (
       newRoute === "storefront" ||
       newRoute === "categories" ||
       newRoute === "trending" ||
       newRoute === "login" ||
-      newRoute === "dashboard"
+      newRoute === "dashboard" ||
+      newRoute === "track"
     ) {
       setRoute(newRoute as AppRoute);
     } else {
@@ -104,6 +109,10 @@ function AppContent() {
           />
         )}
 
+        {route === "track" && (
+          <TrackOrderPage onBackToHome={() => setRoute("storefront")} />
+        )}
+
         {route === "login" && (
           <AdminLoginPage
             onBack={() => setRoute("storefront")}
@@ -127,6 +136,7 @@ function AppContent() {
           route !== "categories" &&
           route !== "categoryPlants" &&
           route !== "trending" &&
+          route !== "track" &&
           route !== "login" &&
           route !== "dashboard" && (
             <HomePage onNavigate={handleNavigate} />
@@ -141,7 +151,10 @@ function AppContent() {
       />
       <PlantDetailModal />
       <CheckoutModal />
-      <OrderConfirmationModal />
+      <OrderConfirmationView
+        onContinueShopping={() => setRoute("storefront")}
+        onTrackOrder={() => setRoute("track")}
+      />
       <TrackOrderModal />
 
       {/* 4. Global Footer */}

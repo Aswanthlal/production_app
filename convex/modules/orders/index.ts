@@ -7,9 +7,10 @@ import type { Doc, Id } from "../../_generated/dataModel";
 
 /**
  * Place a new order from current active cart items.
- * Validates stock, decrements inventory, generates orderNumber, and clears cart.
+ * Validates live stock (throwing if insufficient so stock never goes negative),
+ * decrements stockQty, inserts a pending order with line-item snapshots, and clears cartItems.
  */
-export const createOrder = mutation({
+export const placeOrder = mutation({
   args: {
     tenantId: v.id("tenants"),
     sessionId: v.optional(v.string()),
@@ -52,11 +53,14 @@ export const createOrder = mutation({
       throw new Error("Cannot place an order with an empty cart.");
     }
 
-    // 2. Validate live stock and hydrate products
+    // 2. Atomically validate live stock and hydrate snapshots
     const orderItems: {
       productId: Id<"products">;
+      title: string;
       name: string;
+      sku?: string;
       quantity: number;
+      unitPrice: number;
       price: number;
       imageUrl: string;
     }[] = [];
@@ -81,8 +85,11 @@ export const createOrder = mutation({
 
       orderItems.push({
         productId: product._id,
+        title: product.name,
         name: product.name,
+        sku: product.sku,
         quantity: item.quantity,
+        unitPrice: product.price,
         price: product.price,
         imageUrl: product.imageUrls[0] || "",
       });
@@ -90,7 +97,7 @@ export const createOrder = mutation({
       subtotal += product.price * item.quantity;
     }
 
-    // 3. Decrement live stock for each product
+    // 3. Decrement live stock for each product (stock will never go negative)
     for (const item of cartItems) {
       const product = (await ctx.db.get("products", item.productId))!;
       const newStock = Math.max(0, product.stockQty - item.quantity);
@@ -113,7 +120,7 @@ export const createOrder = mutation({
     const shipping = subtotal >= 499 || cleanCoupon === "FREESHIP" ? 0 : 49;
     const total = Math.max(0, subtotal - discount + shipping);
 
-    // 5. Generate human-readable order number
+    // 5. Generate human-readable order number & delivery date
     const orderNumber = "VD-" + Math.floor(100000 + Math.random() * 900000);
 
     const deliveryDate = new Date();
@@ -132,7 +139,10 @@ export const createOrder = mutation({
       creatorId = firstUser?._id ?? (await ctx.db.insert("users", {}));
     }
 
-    // 6. Create order record
+    const paymentMethodLower = args.paymentMethod.toLowerCase();
+    const paymentStatus = paymentMethodLower === "cod" ? "unpaid" : "paid";
+
+    // 6. Create order record with initial 'pending' status
     const orderId = await ctx.db.insert("orders", {
       tenantId: args.tenantId,
       orderNumber,
@@ -150,13 +160,18 @@ export const createOrder = mutation({
       discount,
       total,
       paymentMethod: args.paymentMethod,
+      paymentStatus,
       estimatedDeliveryDate,
       ...createBaseFields({
         userId: creatorId,
-        category: "orders",
-        type: "order",
-        keywords: [orderNumber.toLowerCase(), args.customerName.toLowerCase()],
-        status: "confirmed",
+        category: "customer-order",
+        type: "standard-order",
+        keywords: [
+          orderNumber.toLowerCase(),
+          args.customerName.toLowerCase(),
+          args.phone.replace(/\D/g, ""),
+        ],
+        status: "pending",
       }),
     });
 
@@ -170,12 +185,62 @@ export const createOrder = mutation({
       orderNumber,
       total,
       estimatedDeliveryDate,
+      status: "pending",
     };
   },
 });
 
+/** Backwards-compatible alias for placeOrder */
+export const createOrder = placeOrder;
+
 /**
- * Fetch an order by orderNumber for live tracking.
+ * Customer order lookup by orderNumber and matching phone number.
+ * Rejects lookup if phone number does not match.
+ */
+export const trackOrderByNumberAndPhone = query({
+  args: {
+    tenantId: v.id("tenants"),
+    orderNumber: v.string(),
+    phone: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireRole(ctx, args.tenantId, ["guest", "customer", "store_admin"]);
+
+    const cleanOrderNumber = args.orderNumber.trim().toUpperCase();
+    const cleanPhone = args.phone.trim().replace(/\D/g, "");
+
+    if (!cleanOrderNumber || !cleanPhone) {
+      return null;
+    }
+
+    const order = await ctx.db
+      .query("orders")
+      .withIndex("by_tenant_orderNumber", (q) =>
+        q.eq("tenantId", args.tenantId).eq("orderNumber", cleanOrderNumber),
+      )
+      .unique();
+
+    if (!order) {
+      return null;
+    }
+
+    const orderPhoneClean = order.phone.replace(/\D/g, "");
+    const matchesPhone =
+      orderPhoneClean === cleanPhone ||
+      (orderPhoneClean.length >= 10 &&
+        cleanPhone.length >= 10 &&
+        orderPhoneClean.slice(-10) === cleanPhone.slice(-10));
+
+    if (!matchesPhone) {
+      return null;
+    }
+
+    return order;
+  },
+});
+
+/**
+ * Fetch an order by orderNumber (legacy / helper).
  */
 export const getOrderByNumber = query({
   args: {
@@ -208,38 +273,53 @@ export const listMyOrders = query({
 
     const userId = await getAuthUserId(ctx);
     if (userId) {
-      return await ctx.db
+      const orders = await ctx.db
         .query("orders")
         .withIndex("by_tenant_user", (q) =>
           q.eq("tenantId", args.tenantId).eq("userId", userId),
         )
         .collect();
+      orders.sort((a, b) => b.dateCreated - a.dateCreated);
+      return orders;
     } else if (args.sessionId) {
-      return await ctx.db
+      const orders = await ctx.db
         .query("orders")
         .withIndex("by_tenant_session", (q) =>
           q.eq("tenantId", args.tenantId).eq("sessionId", args.sessionId),
         )
         .collect();
+      orders.sort((a, b) => b.dateCreated - a.dateCreated);
+      return orders;
     }
     return [];
   },
 });
 
 /**
- * List all store orders for admin dashboard.
+ * List store orders for admin dashboard with reactive status filtering.
  */
 export const listOrdersForAdmin = query({
   args: {
     tenantId: v.id("tenants"),
+    status: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await requireRole(ctx, args.tenantId, ["store_admin"]);
 
-    const orders = await ctx.db
-      .query("orders")
-      .withIndex("by_tenant_orderNumber", (q) => q.eq("tenantId", args.tenantId))
-      .collect();
+    let orders;
+    if (args.status && args.status !== "all") {
+      orders = await ctx.db
+        .query("orders")
+        .withIndex("by_tenant_status", (q) =>
+          q.eq("tenantId", args.tenantId).eq("status", args.status!),
+        )
+        .collect();
+    } else {
+      orders = await ctx.db
+        .query("orders")
+        .withIndex("by_tenant_orderNumber", (q) => q.eq("tenantId", args.tenantId))
+        .collect();
+    }
 
     orders.sort((a, b) => b.dateCreated - a.dateCreated);
     return orders;
@@ -247,7 +327,7 @@ export const listOrdersForAdmin = query({
 });
 
 /**
- * Update order fulfillment status.
+ * Update order fulfillment status. Restores stockQty if transitioned to 'cancelled'.
  */
 export const updateOrderStatus = mutation({
   args: {
@@ -261,6 +341,7 @@ export const updateOrderStatus = mutation({
       v.literal("delivered"),
       v.literal("cancelled"),
     ),
+    adminNotes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const admin = await requireRole(ctx, args.tenantId, ["store_admin"]);
@@ -270,11 +351,48 @@ export const updateOrderStatus = mutation({
       throw new Error("Order not found in this store.");
     }
 
-    await ctx.db.patch("orders", args.orderId, {
+    // If transitioned to 'cancelled', restore stockQty back to products
+    if (order.status !== "cancelled" && args.status === "cancelled") {
+      for (const item of order.items) {
+        const product = await ctx.db.get("products", item.productId);
+        if (product && product.tenantId === args.tenantId) {
+          const newStock = product.stockQty + item.quantity;
+          await ctx.db.patch("products", product._id, {
+            stockQty: newStock,
+            status: newStock > 0 && product.status === "out-of-stock" ? "active" : product.status,
+            dateEdited: Date.now(),
+          });
+        }
+      }
+    }
+
+    let paymentStatus =
+      order.paymentStatus ||
+      (order.paymentMethod && order.paymentMethod.toLowerCase() === "cod" ? "unpaid" : "paid");
+    if (args.status === "delivered" && order.paymentMethod && order.paymentMethod.toLowerCase() === "cod") {
+      paymentStatus = "paid";
+    } else if (args.status === "cancelled" && order.paymentStatus === "paid") {
+      paymentStatus = "refunded";
+    }
+
+    const patchData: {
+      status: typeof args.status;
+      editedBy: Id<"users">;
+      dateEdited: number;
+      paymentStatus: string;
+      adminNotes?: string;
+    } = {
       status: args.status,
       editedBy: admin.userId!,
       dateEdited: Date.now(),
-    });
+      paymentStatus,
+    };
+
+    if (args.adminNotes !== undefined) {
+      patchData.adminNotes = args.adminNotes;
+    }
+
+    await ctx.db.patch("orders", args.orderId, patchData);
 
     return { success: true };
   },

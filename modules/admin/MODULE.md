@@ -8,7 +8,7 @@ Provides authenticated store administration (`AdminLoginPage` and `AdminDashboar
 
 ## Screens
 - `AdminLoginPage` (`src/modules/admin/AdminLoginPage.tsx`) — username & password login gate opened via the header **"Admin"** button.
-- `AdminDashboardPage` (`src/modules/admin/AdminDashboardPage.tsx`) — tabbed workspace (`Categories` tab + `Plants` tab) for catalog management.
+- `AdminDashboardPage` (`src/modules/admin/AdminDashboardPage.tsx`) — tabbed workspace (Manage Categories | Manage Plants | Manage Orders — rendering AdminOrdersTab from modules/orders/MODULE.md)
 
 ## Screen Breakdown
 

@@ -65,10 +65,13 @@ export interface CartItem {
 
 export interface OrderItem {
   productId: string;
-  name: string;
+  name?: string;
+  title?: string;
+  sku?: string;
   quantity: number;
-  price: number;
-  imageUrl: string;
+  price?: number;
+  unitPrice?: number;
+  imageUrl?: string;
 }
 
 export type OrderStatus = "pending" | "confirmed" | "packed" | "shipped" | "delivered" | "cancelled";
@@ -88,9 +91,11 @@ export interface Order {
   discount: number;
   total: number;
   paymentMethod: "upi" | "card" | "cod" | "netbanking";
+  paymentStatus?: "unpaid" | "paid" | "refunded" | string;
   status: OrderStatus;
   createdAt: number;
   estimatedDeliveryDate: string;
+  adminNotes?: string;
 }
 
 export interface CustomerReview {

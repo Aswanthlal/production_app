@@ -98,10 +98,13 @@ export default defineSchema({
     items: v.array(
       v.object({
         productId: v.id("products"),
-        name: v.string(),
+        title: v.optional(v.string()),
+        name: v.optional(v.string()),
+        sku: v.optional(v.string()),
         quantity: v.number(),
-        price: v.number(),
-        imageUrl: v.string(),
+        unitPrice: v.optional(v.number()),
+        price: v.optional(v.number()),
+        imageUrl: v.optional(v.string()),
       }),
     ),
     subtotal: v.number(),
@@ -109,7 +112,9 @@ export default defineSchema({
     discount: v.number(),
     total: v.number(),
     paymentMethod: v.string(),
+    paymentStatus: v.optional(v.string()),
     estimatedDeliveryDate: v.string(),
+    adminNotes: v.optional(v.string()),
     ...baseFields,
   })
     .index("by_tenant_orderNumber", ["tenantId", "orderNumber"])

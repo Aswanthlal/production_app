@@ -31,7 +31,6 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute, onNavigate }) => {
     activeCategories,
     searchPlants,
     openCart,
-    openTrackOrder,
     isAdminLoggedIn,
   } = useStore();
 
@@ -111,7 +110,7 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute, onNavigate }) => {
           </div>
           <div className="hidden sm:flex items-center gap-4 text-[11px] text-emerald-200">
             <button
-              onClick={openTrackOrder}
+              onClick={() => onNavigate("track")}
               className="hover:text-white transition flex items-center gap-1 cursor-pointer"
             >
               <Truck className="w-3.5 h-3.5" /> Track Order
@@ -453,7 +452,7 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute, onNavigate }) => {
           <button
             onClick={() => {
               setMobileMenuOpen(false);
-              openTrackOrder();
+              onNavigate("track");
             }}
             className="w-full text-left py-2.5 px-4 rounded-xl text-sm font-bold text-stone-800 hover:bg-stone-50 flex items-center gap-2"
           >

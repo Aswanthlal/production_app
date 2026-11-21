@@ -55,7 +55,7 @@ export const OrderConfirmationModal: React.FC = () => {
                   {item.quantity}x {item.name}
                 </span>
                 <span className="font-bold text-stone-900">
-                  ₹{(item.price * item.quantity).toLocaleString("en-IN")}
+                  ₹{((item.price ?? item.unitPrice ?? 0) * item.quantity).toLocaleString("en-IN")}
                 </span>
               </div>
             ))}

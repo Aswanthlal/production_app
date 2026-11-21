@@ -70,7 +70,7 @@ interface StoreContextType {
     state: string;
     pincode: string;
     paymentMethod: "upi" | "card" | "cod" | "netbanking";
-  }) => Order | null;
+  }) => Promise<Order | null> | Order | null;
   getOrder: (orderNumber: string) => Order | undefined;
 
   // Admin Auth
@@ -171,7 +171,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const deletePlantMutation = useMutation(api.modules.admin.index.deletePlant);
   const updateStockMutation = useMutation(api.modules.admin.index.updatePlantStock);
   const updateStatusMutation = useMutation(api.modules.admin.index.updatePlantStatus);
-  const createOrderMutation = useMutation(api.modules.orders.index.createOrder);
+  const placeOrderMutation = useMutation(api.modules.orders.index.placeOrder);
   const seedDemoMutation = useMutation(api.modules.admin.index.seedDemoData);
 
   // Auto-seed if database is fresh and tenant does not exist
@@ -370,7 +370,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         city: o.city,
         state: o.state,
         pincode: o.pincode,
-        items: o.items,
+        items: o.items.map((i) => ({
+          ...i,
+          name: i.name || i.title,
+          price: i.price ?? i.unitPrice,
+        })),
         subtotal: o.subtotal,
         shipping: o.shipping,
         discount: o.discount,
@@ -1005,7 +1009,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Order Placement
   const placeOrder = useCallback(
-    (shipping: {
+    async (shipping: {
       customerName: string;
       phone: string;
       address: string;
@@ -1013,7 +1017,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       state: string;
       pincode: string;
       paymentMethod: "upi" | "card" | "cod" | "netbanking";
-    }): Order | null => {
+    }): Promise<Order | null> => {
       if (hydratedCart.length === 0) {
         error("Cart is empty", "Add items before placing an order.");
         return null;
@@ -1027,63 +1031,84 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       }
 
-      for (const item of hydratedCart) {
-        updateStockQty(item.productId, (item.product?.stockQty ?? 0) - item.quantity);
+      const cleanPhone = shipping.phone.trim().replace(/\D/g, "");
+      const cleanPincode = shipping.pincode.trim().replace(/\D/g, "");
+
+      const hasRealProductIds = hydratedCart.every(
+        (item) => !item.productId.startsWith("prod_"),
+      );
+
+      let serverOrderNumber: string | undefined;
+      let serverEstimatedDeliveryDate: string | undefined;
+      let serverOrderId: string | undefined;
+
+      if (liveTenant?._id && hasRealProductIds) {
+        try {
+          const res = await placeOrderMutation({
+            tenantId: liveTenant._id,
+            sessionId,
+            customerName: shipping.customerName.trim(),
+            phone: cleanPhone,
+            address: shipping.address.trim(),
+            city: shipping.city.trim(),
+            state: shipping.state.trim(),
+            pincode: cleanPincode,
+            paymentMethod: shipping.paymentMethod,
+            couponCode: appliedCoupon ?? undefined,
+          });
+          serverOrderNumber = res.orderNumber;
+          serverEstimatedDeliveryDate = res.estimatedDeliveryDate;
+          serverOrderId = res.orderId;
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : "Failed to place order.";
+          error("Order Failed", msg);
+          return null;
+        }
+      } else {
+        for (const item of hydratedCart) {
+          updateStockQty(item.productId, (item.product?.stockQty ?? 0) - item.quantity);
+        }
       }
 
-      const orderNumber = "VD-" + Math.floor(100000 + Math.random() * 900000);
+      const orderNumber = serverOrderNumber || "VD-" + Math.floor(100000 + Math.random() * 900000);
       const deliveryDate = new Date();
       deliveryDate.setDate(deliveryDate.getDate() + 3);
 
       const orderItems = hydratedCart.map((item) => ({
         productId: item.productId,
         name: item.product?.name ?? "Plant",
+        title: item.product?.name ?? "Plant",
         quantity: item.quantity,
         price: item.product?.price ?? item.unitPriceSnapshot,
+        unitPrice: item.product?.price ?? item.unitPriceSnapshot,
         imageUrl: item.product?.imageUrls[0] ?? "",
       }));
 
-      const hasRealProductIds = hydratedCart.every(
-        (item) => !item.productId.startsWith("prod_"),
-      );
-
-      if (liveTenant?._id && hasRealProductIds) {
-        createOrderMutation({
-          tenantId: liveTenant._id,
-          sessionId,
-          customerName: shipping.customerName,
-          phone: shipping.phone,
-          address: shipping.address,
-          city: shipping.city,
-          state: shipping.state,
-          pincode: shipping.pincode,
-          paymentMethod: shipping.paymentMethod,
-          couponCode: appliedCoupon ?? undefined,
-        }).catch(() => {});
-      }
-
       const newOrder: Order = {
-        _id: "order_" + Math.random().toString(36).substring(2, 9),
+        _id: serverOrderId || "order_" + Math.random().toString(36).substring(2, 9),
         orderNumber,
-        customerName: shipping.customerName,
-        phone: shipping.phone,
-        address: shipping.address,
-        city: shipping.city,
-        state: shipping.state,
-        pincode: shipping.pincode,
+        customerName: shipping.customerName.trim(),
+        phone: cleanPhone,
+        address: shipping.address.trim(),
+        city: shipping.city.trim(),
+        state: shipping.state.trim(),
+        pincode: cleanPincode,
         items: orderItems,
         subtotal,
         shipping: shippingFee,
         discount,
         total: estimatedTotal,
         paymentMethod: shipping.paymentMethod,
-        status: "confirmed",
+        paymentStatus: shipping.paymentMethod === "cod" ? "unpaid" : "paid",
+        status: "pending",
         createdAt: Date.now(),
-        estimatedDeliveryDate: deliveryDate.toLocaleDateString("en-IN", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        }),
+        estimatedDeliveryDate:
+          serverEstimatedDeliveryDate ||
+          deliveryDate.toLocaleDateString("en-IN", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          }),
       };
 
       setLocalOrders((prev) => [newOrder, ...prev]);
@@ -1091,10 +1116,24 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setActiveOrder(newOrder);
       setIsCheckoutOpen(false);
       setIsOrderSuccessOpen(true);
-      success("Order Placed!", `Order #${orderNumber} confirmed.`);
+      success("Order Placed!", `Order #${orderNumber} placed successfully.`);
       return newOrder;
     },
-    [hydratedCart, subtotal, shippingFee, discount, estimatedTotal, liveTenant, createOrderMutation, sessionId, appliedCoupon, updateStockQty, clearCart, error, success],
+    [
+      hydratedCart,
+      liveTenant,
+      sessionId,
+      appliedCoupon,
+      placeOrderMutation,
+      updateStockQty,
+      subtotal,
+      shippingFee,
+      discount,
+      estimatedTotal,
+      clearCart,
+      error,
+      success,
+    ],
   );
 
   const getOrder = useCallback(

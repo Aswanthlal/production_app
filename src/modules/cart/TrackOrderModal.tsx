@@ -39,7 +39,11 @@ export const TrackOrderModal: React.FC = () => {
         city: liveOrder.city,
         state: liveOrder.state,
         pincode: liveOrder.pincode,
-        items: liveOrder.items,
+        items: liveOrder.items.map((i) => ({
+          ...i,
+          name: i.name || i.title,
+          price: i.price ?? i.unitPrice,
+        })),
         subtotal: liveOrder.subtotal,
         shipping: liveOrder.shipping,
         discount: liveOrder.discount,

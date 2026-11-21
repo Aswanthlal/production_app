@@ -10,6 +10,7 @@ import {
   LogOut,
   RotateCcw,
   CheckCircle2,
+  ShoppingBag,
 } from "lucide-react";
 import { useStore } from "../../context/StoreContext";
 import { Button } from "../../components/ui/Button";
@@ -17,6 +18,7 @@ import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
 import { Drawer } from "../../components/ui/Drawer";
 import type { Plant, PlantStatus } from "../../types/store";
+import { AdminOrdersTab } from "../orders/AdminOrdersTab";
 
 interface AdminDashboardPageProps {
   username: string;
@@ -43,7 +45,7 @@ export default function AdminDashboardPage({
     logoutAdmin,
   } = useStore();
 
-  const [activeTab, setActiveTab] = useState<"categories" | "plants">("plants");
+  const [activeTab, setActiveTab] = useState<"plants" | "categories" | "orders">("plants");
 
   // Category creation form state
   const [newCatName, setNewCatName] = useState("");
@@ -344,6 +346,18 @@ export default function AdminDashboardPage({
         >
           <FolderKanban className="w-4 h-4" />
           <span>Manage Categories ({categories.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("orders")}
+          className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+            activeTab === "orders"
+              ? "bg-emerald-700 text-white shadow-sm"
+              : "text-stone-600 hover:bg-stone-100"
+          }`}
+        >
+          <ShoppingBag className="w-4 h-4" />
+          <span>Manage Orders</span>
         </button>
 
         <div className="ml-auto">
@@ -660,6 +674,9 @@ export default function AdminDashboardPage({
           </div>
         </div>
       )}
+
+      {/* ================= TAB 3: MANAGE ORDERS ================= */}
+      {activeTab === "orders" && <AdminOrdersTab />}
 
       {/* ================= PLANT EDITOR DRAWER (Add / Edit) ================= */}
       <Drawer
