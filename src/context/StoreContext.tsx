@@ -70,6 +70,7 @@ interface StoreContextType {
     state: string;
     pincode: string;
     paymentMethod: "upi" | "card" | "cod" | "netbanking";
+    paymentStatus?: "unpaid" | "paid";
   }) => Promise<Order | null> | Order | null;
   getOrder: (orderNumber: string) => Order | undefined;
 
@@ -1017,6 +1018,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       state: string;
       pincode: string;
       paymentMethod: "upi" | "card" | "cod" | "netbanking";
+      paymentStatus?: "unpaid" | "paid";
     }): Promise<Order | null> => {
       if (hydratedCart.length === 0) {
         error("Cart is empty", "Add items before placing an order.");
@@ -1054,6 +1056,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             state: shipping.state.trim(),
             pincode: cleanPincode,
             paymentMethod: shipping.paymentMethod,
+            paymentStatus: shipping.paymentStatus,
             couponCode: appliedCoupon ?? undefined,
           });
           serverOrderNumber = res.orderNumber;
@@ -1099,7 +1102,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         discount,
         total: estimatedTotal,
         paymentMethod: shipping.paymentMethod,
-        paymentStatus: shipping.paymentMethod === "cod" ? "unpaid" : "paid",
+        paymentStatus:
+          shipping.paymentStatus ??
+          (shipping.paymentMethod === "cod" ? "unpaid" : "paid"),
         status: "pending",
         createdAt: Date.now(),
         estimatedDeliveryDate:

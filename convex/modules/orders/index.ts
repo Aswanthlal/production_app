@@ -21,6 +21,7 @@ export const placeOrder = mutation({
     state: v.string(),
     pincode: v.string(),
     paymentMethod: v.string(),
+    paymentStatus: v.optional(v.string()),
     couponCode: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -140,7 +141,12 @@ export const placeOrder = mutation({
     }
 
     const paymentMethodLower = args.paymentMethod.toLowerCase();
-    const paymentStatus = paymentMethodLower === "cod" ? "unpaid" : "paid";
+    const paymentStatus =
+      paymentMethodLower === "cod"
+        ? "unpaid"
+        : args.paymentStatus === "paid"
+          ? "paid"
+          : "unpaid";
 
     // 6. Create order record with initial 'pending' status
     const orderId = await ctx.db.insert("orders", {
