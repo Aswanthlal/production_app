@@ -4,9 +4,6 @@ import { baseFields } from "./lib/baseFields";
 
 export default defineSchema({
   users: defineTable({}),
-  numbers: defineTable({
-    value: v.number(),
-  }),
   tenants: defineTable({
     tenantId: v.optional(v.id("tenants")),
     name: v.string(),

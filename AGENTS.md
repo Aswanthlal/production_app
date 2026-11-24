@@ -1,7 +1,7 @@
-version:  1.0.0
-updated:  2026-11-20
-by:       Aswanth Lal
-change:   Initial AI execution rules and repository architecture contract
+version:  1.0.1
+updated:  2026-11-24
+by:       Antigravity
+change:   Added Commands and Before-Finish Checks sections per onboarding rules
 
 ## Execution Order
 1. Read `AGENTS.md` and `BASELINE.md` before writing any code.
@@ -19,6 +19,19 @@ change:   Initial AI execution rules and repository architecture contract
 - Every query and mutation MUST scope reads/writes by `tenantId` and validate arguments with `convex/values`.
 - If a field exists in `convex/schema.ts` and is missing from `modules/<module>/collections/<collection>.md`, update the Markdown collection file first.
 - Never commit `.env.local` or secret keys.
+
+## Commands
+- `npm run dev`: Start local Vite frontend dev server.
+- `npx convex dev`: Start local Convex backend dev server and schema sync.
+- `npx tsc --noEmit`: Typecheck full project without emitting build artifacts.
+- `npm run lint`: Lint TypeScript and React source code with ESLint.
+- `npm run build`: Typecheck and produce production bundle (`tsc -b && vite build`).
+
+## Before-Finish Checks
+- Typecheck green (`npx tsc --noEmit` exits with 0 errors).
+- Build green (`npm run build` succeeds).
+- No `.env.local` staged or committed.
+- Markdown specs updated in the same PR (`BASELINE.md`, `MODULE.md`, `collections/*.md`, `QA.md`).
 
 <!-- convex-ai-start -->
 

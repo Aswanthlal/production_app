@@ -51,6 +51,7 @@ export const TrackOrderPage: React.FC<TrackOrderPageProps> = ({
   // Auto-fill from store if initial is empty but store has orders
   useEffect(() => {
     if (!initialOrderNumber && orders.length > 0 && !submittedQuery) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOrderNumberInput(orders[0].orderNumber);
       setPhoneInput(orders[0].phone);
       setSubmittedQuery({

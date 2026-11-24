@@ -1,7 +1,7 @@
-version:  1.0.0
-updated:  2026-11-20
-by:       Aswanth Lal
-change:   Initial application baseline, roles, states, and global invariants
+version:  1.0.1
+updated:  2026-11-24
+by:       Antigravity
+change:   Added orders module under Modules and aligned specification spine
 
 ## What this application solves
 Direct-to-consumer online plant and gardening marketplace (modeled on NurseryLive).
@@ -30,4 +30,5 @@ Direct-to-consumer online plant and gardening marketplace (modeled on NurseryLiv
 - `storefront`: `modules/storefront/MODULE.md`
 - `catalog`: `modules/catalog/MODULE.md`
 - `cart`: `modules/cart/MODULE.md`
+- `orders`: `modules/orders/MODULE.md`
 - `admin`: `modules/admin/MODULE.md`

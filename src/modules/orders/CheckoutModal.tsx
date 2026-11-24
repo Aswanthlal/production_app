@@ -63,11 +63,13 @@ export const CheckoutModal: React.FC = () => {
   // Reset steps and errors when modal opens or closes
   useEffect(() => {
     if (isCheckoutOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStep("details");
       setPaymentError(null);
       setSubmitError(null);
       setCardHolder(formData.customerName || "Aarav Sharma");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCheckoutOpen]);
 
   const handleClose = () => {

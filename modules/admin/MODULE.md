@@ -26,7 +26,7 @@ Provides authenticated store administration (`AdminLoginPage` and `AdminDashboar
 |---|---|---|---|
 | 1 | Top Admin Bar (Store/Tenant badge, signed-in username, "Sign Out" button) | Admin header | Sign out and redirect to `HomePage` |
 | 2 | Summary KPI strip (Total Plants, Active Plants, Out-of-Stock count, Total Categories) | Metric cards | Read catalog summary counts for current `tenantId` |
-| 3 | Tab switcher (`Manage Categories` \| `Manage Plants`) | Tab bar | Switch active admin workspace view |
+| 3 | Tab switcher (`Manage Categories` \| `Manage Plants` \| `Manage Orders`) | Tab bar | Switch active admin workspace view |
 | 4 | **Category Form:** Name, Slug (auto-generated), Description, Cover Image URL/Upload, Featured toggle | Category creator form | `createCategory` (`store_admin` only) |
 | 5 | **Category List:** Rows showing image, name, assigned plant count, and "Delete Category" button | Category table/list | `listCategories` + `deleteCategory` (with confirmation prompt) |
 | 6 | **Add / Edit Plant Form:** Title, SKU, Multi-Category selector (must pick `>= 1` categories), Price, MRP, Stock Quantity, Care Level / Light / Watering details, Description, Image URLs / Upload, Trending toggle, Status (`draft` \| `active` \| `out-of-stock` \| `archived`) | Plant editor drawer/form | `createPlant` / `updatePlant` (`store_admin` only) |
