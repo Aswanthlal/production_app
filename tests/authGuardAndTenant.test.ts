@@ -215,7 +215,7 @@ describe("Role Guards & Tenant Isolation Test Suite", () => {
 
   describe("Tenant Isolation", () => {
     it("blocks a user from Tenant 1 from accessing Tenant 2 records", async () => {
-      // customerUserId only has membership in Tenant 1
+      // customerUserId only has membership in tenant 1
       vi.mocked(getAuthUserId).mockResolvedValue(customerUserId);
       const ctx = createMockCtx();
 
@@ -225,11 +225,11 @@ describe("Role Guards & Tenant Isolation Test Suite", () => {
     });
 
     it("blocks an admin from Tenant 2 from performing admin mutations on Tenant 1", async () => {
-      // otherTenantUserId is admin of Tenant 2, NOT Tenant 1
+      // otherTenantUserId is admin of tenant 2, NOT tenant 1
       vi.mocked(getAuthUserId).mockResolvedValue(otherTenantUserId);
       const ctx = createMockCtx();
 
-      // otherTenantUserId has NO membership in tenant1Id
+      // otherTenantUserId has no membership in tenant1Id
       await expect(
         requireRole(ctx, tenant1Id, ["customer"]),
       ).rejects.toThrow("You are not a member of this tenant.");
@@ -252,13 +252,13 @@ describe("Role Guards & Tenant Isolation Test Suite", () => {
         { _id: "cat_3", tenantId: tenant2Id, name: "Bonsai Trees" },
       ];
 
-      // Scoped read query for Tenant 1
+      // Scoped read query for tenant 1
       const tenant1Results = mockDbCategories.filter((c) => c.tenantId === tenant1Id);
       expect(tenant1Results).toHaveLength(2);
       expect(tenant1Results.every((c) => c.tenantId === tenant1Id)).toBe(true);
       expect(tenant1Results.some((c) => c._id === "cat_3")).toBe(false);
 
-      // Scoped read query for Tenant 2
+      // Scoped read query for tenant 2
       const tenant2Results = mockDbCategories.filter((c) => c.tenantId === tenant2Id);
       expect(tenant2Results).toHaveLength(1);
       expect(tenant2Results[0].name).toBe("Bonsai Trees");
@@ -268,7 +268,7 @@ describe("Role Guards & Tenant Isolation Test Suite", () => {
     it("proves cross-tenant record mutation is rejected when target tenant does not match", () => {
       const targetCategory = {
         _id: "cat_3",
-        tenantId: tenant2Id, // belongs to Tenant 2
+        tenantId: tenant2Id, // belongs to tenant 2
         name: "Bonsai Trees",
       };
 

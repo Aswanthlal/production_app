@@ -16,7 +16,6 @@ import type * as modules_cart_index from "../modules/cart/index.js";
 import type * as modules_catalog_index from "../modules/catalog/index.js";
 import type * as modules_orders_index from "../modules/orders/index.js";
 import type * as modules_storefront_index from "../modules/storefront/index.js";
-import type * as myFunctions from "../myFunctions.js";
 import type * as users from "../users.js";
 
 import type {
@@ -34,7 +33,6 @@ declare const fullApi: ApiFromModules<{
   "modules/catalog/index": typeof modules_catalog_index;
   "modules/orders/index": typeof modules_orders_index;
   "modules/storefront/index": typeof modules_storefront_index;
-  myFunctions: typeof myFunctions;
   users: typeof users;
 }>;
 
