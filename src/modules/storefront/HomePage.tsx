@@ -17,7 +17,6 @@ export default function HomePage({ onNavigate }: HomePageProps) {
     <div className="space-y-14 sm:space-y-20 pb-16">
       {/* 1. Hero Promotional Carousel */}
       <HeroCarousel onNavigate={onNavigate} />
-
       {/* 2. Quick Access Circular Categories Strip (Capped at 6 + View All CTA) */}
       <CategoryStrip
         onSelectCategory={(catId) => onNavigate("categoryPlants", catId)}
@@ -43,7 +42,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-emerald-600" />
           <span>
-            <strong>Verdant Interactive Store:</strong> All actions (Cart, Stock validation, Multi-Category Admin, Order Placement, Tracking) are fully functional.
+            {/* <strong>Verdant Interactive Store:</strong> All actions (Cart, Stock validation, Multi-Category Admin, Order Placement, Tracking) are fully functional. */}
           </span>
         </div>
         <button
