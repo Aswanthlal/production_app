@@ -1,4 +1,4 @@
-version:  1.0.1
+version:  1.1.0
 updated:  2026-11-24
 by:       Antigravity
 change:   Added orders module under Modules and aligned specification spine
@@ -32,3 +32,4 @@ Direct-to-consumer online plant and gardening marketplace (modeled on NurseryLiv
 - `cart`: `modules/cart/MODULE.md`
 - `orders`: `modules/orders/MODULE.md`
 - `admin`: `modules/admin/MODULE.md`
+- `ai`: `modules/ai/MODULE.md`

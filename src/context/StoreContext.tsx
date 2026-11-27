@@ -101,6 +101,10 @@ interface StoreContextType {
   openQuickView: (plant: Plant) => void;
   closeQuickView: () => void;
 
+  isPlantAdvisorOpen: boolean;
+  openPlantAdvisor: () => void;
+  closePlantAdvisor: () => void;
+
   // Reset demo
   resetToDemoData: () => void;
 }
@@ -259,6 +263,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isTrackOrderOpen, setIsTrackOrderOpen] = useState(false);
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
   const [quickViewPlant, setQuickViewPlant] = useState<Plant | null>(null);
+  const [isPlantAdvisorOpen, setIsPlantAdvisorOpen] = useState(false);
 
   // Pure derivation of Banners from live Convex data or local state
   const banners: Banner[] = useMemo(() => {
@@ -1198,6 +1203,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const openQuickView = useCallback((plant: Plant) => setQuickViewPlant(plant), []);
   const closeQuickView = useCallback(() => setQuickViewPlant(null), []);
 
+  const openPlantAdvisor = useCallback(() => setIsPlantAdvisorOpen(true), []);
+  const closePlantAdvisor = useCallback(() => setIsPlantAdvisorOpen(false), []);
+
   // Demo reset
   const resetToDemoData = useCallback(() => {
     if (liveTenant?._id) {
@@ -1275,6 +1283,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         quickViewPlant,
         openQuickView,
         closeQuickView,
+        isPlantAdvisorOpen,
+        openPlantAdvisor,
+        closePlantAdvisor,
         resetToDemoData,
       }}
     >

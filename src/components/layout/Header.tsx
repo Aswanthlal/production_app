@@ -31,6 +31,7 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute, onNavigate }) => {
     activeCategories,
     searchPlants,
     openCart,
+    openPlantAdvisor,
     isAdminLoggedIn,
   } = useStore();
 
@@ -304,6 +305,16 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute, onNavigate }) => {
 
           {/* Header Utilities */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Plant Advisor AI */}
+            <button
+              type="button"
+              onClick={openPlantAdvisor}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold transition cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>Plant Advisor AI</span>
+            </button>
+
             {/* Wishlist */}
             <button
               onClick={() => onNavigate("trending")}
@@ -448,6 +459,16 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute, onNavigate }) => {
             className="w-full text-left py-2.5 px-4 rounded-xl text-sm font-bold text-stone-800 hover:bg-stone-50"
           >
             Trending Plants
+          </button>
+          <button
+            onClick={() => {
+              setMobileMenuOpen(false);
+              openPlantAdvisor();
+            }}
+            className="w-full text-left py-2.5 px-4 rounded-xl text-sm font-bold text-emerald-800 bg-emerald-50/70 hover:bg-emerald-100 flex items-center gap-2"
+          >
+            <Sparkles className="w-4 h-4 text-amber-500" />
+            <span>Plant Advisor AI</span>
           </button>
           <button
             onClick={() => {

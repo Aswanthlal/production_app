@@ -44,6 +44,7 @@ export interface Plant {
   careLevel?: "Easy" | "Moderate" | "Expert";
   light?: string;
   watering?: string;
+  keywords?: string[];
   price: number;
   mrp?: number;
   stockQty: number;

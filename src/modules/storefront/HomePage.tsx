@@ -11,12 +11,37 @@ interface HomePageProps {
 }
 
 export default function HomePage({ onNavigate }: HomePageProps) {
-  const { resetToDemoData } = useStore();
+  const { resetToDemoData, openPlantAdvisor } = useStore();
 
   return (
     <div className="space-y-14 sm:space-y-20 pb-16">
       {/* 1. Hero Promotional Carousel */}
       <HeroCarousel onNavigate={onNavigate} />
+
+      {/* 1b. Plant Advisor AI Callout */}
+      <section className="bg-gradient-to-r from-emerald-900 via-emerald-800 to-emerald-900 text-white rounded-3xl p-5 sm:p-7 shadow-lg border border-emerald-700/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="space-y-1.5">
+          <div className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-300">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Interactive Botanical IQ</span>
+          </div>
+          <h2 className="text-lg sm:text-xl font-black tracking-tight">
+            Not sure which plant fits your space?
+          </h2>
+          <p className="text-xs sm:text-sm text-emerald-100/90 max-w-xl">
+            Ask our Plant Advisor AI about sunlight, room type, pet safety, or budget and get instant matches from live in-stock plants.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={openPlantAdvisor}
+          className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-stone-950 text-xs sm:text-sm font-black shadow-md transition cursor-pointer shrink-0 active:scale-[0.98]"
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>Plant Advisor AI</span>
+        </button>
+      </section>
+
       {/* 2. Quick Access Circular Categories Strip (Capped at 6 + View All CTA) */}
       <CategoryStrip
         onSelectCategory={(catId) => onNavigate("categoryPlants", catId)}

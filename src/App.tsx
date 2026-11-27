@@ -19,6 +19,7 @@ import { CheckoutModal } from "./modules/orders/CheckoutModal";
 import { OrderConfirmationView } from "./modules/orders/OrderConfirmationView";
 import { TrackOrderPage } from "./modules/orders/TrackOrderPage";
 import { TrackOrderModal } from "./modules/cart/TrackOrderModal";
+import { PlantAdvisorDrawer } from "./modules/ai/PlantAdvisorDrawer";
 
 export type AppRoute =
   | "storefront"
@@ -156,6 +157,7 @@ function AppContent() {
         onTrackOrder={() => setRoute("track")}
       />
       <TrackOrderModal />
+      <PlantAdvisorDrawer />
 
       {/* 4. Global Footer */}
       <Footer onNavigate={handleNavigate} />

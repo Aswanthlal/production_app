@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useAction } from "convex/react";
 import {
   FolderKanban,
   Sprout,
@@ -11,7 +12,12 @@ import {
   RotateCcw,
   CheckCircle2,
   ShoppingBag,
+  Sparkles,
+  AlertCircle,
+  X,
 } from "lucide-react";
+import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 import { useStore } from "../../context/StoreContext";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
@@ -19,6 +25,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Drawer } from "../../components/ui/Drawer";
 import type { Plant, PlantStatus } from "../../types/store";
 import { AdminOrdersTab } from "../orders/AdminOrdersTab";
+import { extractAiErrorMessage } from "../ai/utils";
 
 interface AdminDashboardPageProps {
   username: string;
@@ -32,6 +39,7 @@ export default function AdminDashboardPage({
   onViewStorefront,
 }: AdminDashboardPageProps) {
   const {
+    tenantId,
     categories,
     plants,
     createCategory,
@@ -44,6 +52,19 @@ export default function AdminDashboardPage({
     resetToDemoData,
     logoutAdmin,
   } = useStore();
+
+  const generatePlantDraft = useAction(api.modules.ai.actions.generatePlantDraft);
+  const generateOpsBrief = useAction(api.modules.ai.actions.generateOpsBrief);
+
+  // AI Ops Brief state
+  const [isOpsBriefOpen, setIsOpsBriefOpen] = useState(false);
+  const [isOpsBriefLoading, setIsOpsBriefLoading] = useState(false);
+  const [opsBriefError, setOpsBriefError] = useState<string | null>(null);
+  const [opsBrief, setOpsBrief] = useState<{ summary: string; actions: string[] } | null>(null);
+
+  // AI Plant Auto-Fill state
+  const [isAiDraftLoading, setIsAiDraftLoading] = useState(false);
+  const [aiDraftError, setAiDraftError] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<"plants" | "categories" | "orders">("plants");
 
@@ -71,6 +92,8 @@ export default function AdminDashboardPage({
     light: string;
     watering: string;
     description: string;
+    careDetails: string;
+    keywords: string[];
     imageUrls: string[];
     isTrending: boolean;
     status: PlantStatus;
@@ -86,6 +109,8 @@ export default function AdminDashboardPage({
     light: "Bright indirect light",
     watering: "Once a week",
     description: "",
+    careDetails: "",
+    keywords: [],
     imageUrls: ["https://images.unsplash.com/photo-1614594573661-f9d3cf1f7fa8?auto=format&fit=crop&w=800&q=80"],
     isTrending: false,
     status: "active",
@@ -143,6 +168,7 @@ export default function AdminDashboardPage({
   const handleOpenAddPlant = () => {
     setEditingPlantId(null);
     setPlantFormError(null);
+    setAiDraftError(null);
     setPlantForm({
       name: "",
       slug: "",
@@ -155,6 +181,8 @@ export default function AdminDashboardPage({
       light: "Bright indirect light",
       watering: "Once a week",
       description: "",
+      careDetails: "",
+      keywords: [],
       imageUrls: ["https://images.unsplash.com/photo-1614594573661-f9d3cf1f7fa8?auto=format&fit=crop&w=800&q=80"],
       isTrending: false,
       status: "active",
@@ -166,6 +194,7 @@ export default function AdminDashboardPage({
   const handleOpenEditPlant = (plant: Plant) => {
     setEditingPlantId(plant._id);
     setPlantFormError(null);
+    setAiDraftError(null);
     setPlantForm({
       name: plant.name,
       slug: plant.slug,
@@ -178,11 +207,74 @@ export default function AdminDashboardPage({
       light: plant.light || "",
       watering: plant.watering || "",
       description: plant.description,
+      careDetails: plant.careDetails || "",
+      keywords: plant.keywords || [],
       imageUrls: plant.imageUrls,
       isTrending: plant.isTrending,
       status: plant.status,
     });
     setIsPlantDrawerOpen(true);
+  };
+
+  // AI Auto-Fill Plant Metadata (human-in-the-loop: populates form state only)
+  const handleAutoFillWithAi = async () => {
+    const cleanName = plantForm.name.trim();
+    if (!cleanName) {
+      setAiDraftError("Enter a plant name first so AI can generate care details.");
+      return;
+    }
+    if (!tenantId || tenantId.startsWith("tenant_")) {
+      setAiDraftError("Live store connection is initializing. Please wait a moment and try again.");
+      return;
+    }
+
+    setAiDraftError(null);
+    setIsAiDraftLoading(true);
+    try {
+      const draft = await generatePlantDraft({
+        tenantId: tenantId as Id<"tenants">,
+        plantName: cleanName,
+      });
+      setPlantForm((prev) => ({
+        ...prev,
+        description: draft.description,
+        careDetails: draft.careDetails,
+        careLevel: draft.careLevel,
+        light: draft.light,
+        watering: draft.watering,
+        keywords: draft.keywords,
+      }));
+    } catch (err: unknown) {
+      setAiDraftError(
+        extractAiErrorMessage(err, "Failed to auto-fill plant details with AI."),
+      );
+    } finally {
+      setIsAiDraftLoading(false);
+    }
+  };
+
+  // AI Ops Brief Generator
+  const handleGenerateOpsBrief = async () => {
+    setIsOpsBriefOpen(true);
+    if (!tenantId || tenantId.startsWith("tenant_")) {
+      setOpsBriefError("Live store connection is initializing. Please wait a moment and try again.");
+      return;
+    }
+
+    setOpsBriefError(null);
+    setIsOpsBriefLoading(true);
+    try {
+      const result = await generateOpsBrief({
+        tenantId: tenantId as Id<"tenants">,
+      });
+      setOpsBrief(result);
+    } catch (err: unknown) {
+      setOpsBriefError(
+        extractAiErrorMessage(err, "Failed to generate AI Ops Brief."),
+      );
+    } finally {
+      setIsOpsBriefLoading(false);
+    }
   };
 
   // Save Plant (Multi-Category Validation)
@@ -259,7 +351,17 @@ export default function AdminDashboardPage({
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void handleGenerateOpsBrief()}
+            isLoading={isOpsBriefLoading}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500/60"
+            leftIcon={<Sparkles className="w-3.5 h-3.5 text-amber-300" />}
+          >
+            AI Ops Brief
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -282,6 +384,85 @@ export default function AdminDashboardPage({
           </Button>
         </div>
       </div>
+
+      {/* 1b. Collapsible AI Ops Brief Card */}
+      {isOpsBriefOpen && (
+        <div className="bg-white rounded-3xl border border-emerald-200 p-5 sm:p-6 shadow-sm space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-amber-600" />
+              </div>
+              <div>
+                <h2 className="text-sm font-black text-stone-900">AI Ops Brief</h2>
+                <p className="text-[11px] text-stone-500">
+                  Prioritized restock alerts (stock ≤ 5) &amp; pending orders
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                isLoading={isOpsBriefLoading}
+                onClick={() => void handleGenerateOpsBrief()}
+              >
+                Refresh
+              </Button>
+              <button
+                type="button"
+                onClick={() => setIsOpsBriefOpen(false)}
+                className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition cursor-pointer"
+                aria-label="Close AI Ops Brief"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {opsBriefError && (
+            <div
+              role="alert"
+              className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-800 flex items-start gap-2"
+            >
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <span>{opsBriefError}</span>
+            </div>
+          )}
+
+          {isOpsBriefLoading && (
+            <p className="text-xs font-semibold text-stone-600 py-2">
+              Analyzing low-stock inventory and pending orders...
+            </p>
+          )}
+
+          {!isOpsBriefLoading && opsBrief && (
+            <div className="space-y-3">
+              <p className="text-xs sm:text-sm text-stone-700 leading-relaxed bg-emerald-50/60 border border-emerald-100 rounded-2xl p-3.5">
+                {opsBrief.summary}
+              </p>
+              {opsBrief.actions.length > 0 ? (
+                <ul className="space-y-1.5">
+                  {opsBrief.actions.map((actionItem, index) => (
+                    <li
+                      key={index}
+                      className="text-xs text-stone-800 bg-stone-50 border border-stone-200/80 rounded-xl px-3.5 py-2 flex items-start gap-2"
+                    >
+                      <span className="font-black text-emerald-700">{index + 1}.</span>
+                      <span>{actionItem}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-xs text-stone-500">
+                  No urgent restock or pending-order actions flagged right now.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 2. KPI Metrics Strip */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -699,18 +880,45 @@ export default function AdminDashboardPage({
             </div>
           )}
 
-          <Input
-            label="Plant Title"
-            required
-            value={plantForm.name}
-            onChange={(e) =>
-              setPlantForm({
-                ...plantForm,
-                name: e.target.value,
-                slug: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
-              })
-            }
-          />
+          <div>
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <Input
+                  label="Plant Title"
+                  required
+                  value={plantForm.name}
+                  onChange={(e) =>
+                    setPlantForm({
+                      ...plantForm,
+                      name: e.target.value,
+                      slug: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
+                    })
+                  }
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                isLoading={isAiDraftLoading}
+                disabled={isAiDraftLoading || !plantForm.name.trim()}
+                onClick={() => void handleAutoFillWithAi()}
+                leftIcon={<Sparkles className="w-3.5 h-3.5 text-amber-500" />}
+                className="shrink-0 border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800"
+              >
+                Auto-Fill with AI
+              </Button>
+            </div>
+            {aiDraftError && (
+              <div
+                role="alert"
+                className="mt-2 p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-semibold flex items-start gap-2"
+              >
+                <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
+                <span>{aiDraftError}</span>
+              </div>
+            )}
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <Input
@@ -852,6 +1060,36 @@ export default function AdminDashboardPage({
               placeholder="Botanical highlights, foliage overview, origin..."
             />
           </div>
+
+          <div>
+            <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1">
+              Care Details
+            </label>
+            <textarea
+              rows={2}
+              value={plantForm.careDetails}
+              onChange={(e) =>
+                setPlantForm({ ...plantForm, careDetails: e.target.value })
+              }
+              className="w-full bg-white border border-stone-200 rounded-xl p-3 text-xs text-stone-900 focus:outline-none focus:border-emerald-600"
+              placeholder="Practical care tips, humidity, soil & fertilizer notes..."
+            />
+          </div>
+
+          <Input
+            label="Search Keywords (comma-separated)"
+            placeholder="e.g. indoor, air-purifying, easy-care"
+            value={plantForm.keywords.join(", ")}
+            onChange={(e) =>
+              setPlantForm({
+                ...plantForm,
+                keywords: e.target.value
+                  .split(",")
+                  .map((kw) => kw.trim().toLowerCase())
+                  .filter(Boolean),
+              })
+            }
+          />
 
           <Input
             label="Image URL"
