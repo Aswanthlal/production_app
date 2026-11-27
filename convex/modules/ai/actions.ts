@@ -5,8 +5,8 @@ import { internal } from "../../_generated/api";
 import { ConvexError, v } from "convex/values";
 
 const GROQ_CHAT_COMPLETIONS_URL = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_MODEL = "llama-3.3-70b-versatile";
-const GROQ_MAX_TOKENS = 450;
+const GROQ_MODEL = "openai/gpt-oss-20b";
+const GROQ_MAX_TOKENS = 1200;
 
 type CareLevel = "Easy" | "Moderate" | "Expert";
 
@@ -69,6 +69,9 @@ async function callGroqStructuredJson<T>(
   }
 
   if (!response.ok) {
+    const errorBody = await response.text().catch(() => "");
+    console.error(`Groq API error (HTTP ${response.status}):`, errorBody);
+
     if (response.status === 401 || response.status === 403) {
       throw new ConvexError(
         "AI service authentication failed. Please verify GROQ_API_KEY on the server.",
@@ -202,7 +205,7 @@ export const askPlantAdvisor = action({
       "Answer the shopper's question concisely and helpfully using ONLY the provided active catalog JSON.",
       "Do not invent products, prices, or product IDs.",
       'Return valid JSON with exact keys: { "answer": string, "recommendedProductIds": string[] }.',
-      "Include at most 4 matching `_id` values from the provided catalog in `recommendedProductIds`, or [] if none match.",
+      "Include at most 4 matching `_id` values from the provided catalog in `recommendedProductIds` (or [] if none match), and mention ONLY those exact selected plants in `answer`.",
     ].join(" ");
 
     const userPrompt = JSON.stringify({

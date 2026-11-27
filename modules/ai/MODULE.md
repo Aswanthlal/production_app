@@ -4,7 +4,7 @@ by:       Aswanth Lal
 change:   Implemented AI IQ layer module (`convex/modules/ai/*`, `PlantAdvisorDrawer`, AdminDashboardPage AI triggers, and `tests/ai.test.ts`)
 
 ## Purpose
-Provides the tenant-scoped IQ Layer across the storefront and admin dashboard via Convex `"use node"` actions backed by Groq (`llama-3.3-70b-versatile` structured JSON outputs). Enables shoppers (`guest` / `customer`) to query live `active` inventory via natural language and empowers `store_admin` users to auto-generate structured plant metadata and actionable inventory/order briefs.
+Provides the tenant-scoped IQ Layer across the storefront and admin dashboard via Convex `"use node"` actions backed by Groq (`openai/gpt-oss-20b` structured JSON outputs). Enables shoppers (`guest` / `customer`) to query live `active` inventory via natural language and empowers `store_admin` users to auto-generate structured plant metadata and actionable inventory/order briefs.
 
 ## Screens
 - `PlantAdvisorDrawer` (`src/modules/ai/PlantAdvisorDrawer.tsx`) — slide-over assistant drawer opened from the `HomePage` / `Header` **"Plant Advisor AI"** trigger.
@@ -41,7 +41,7 @@ Provides the tenant-scoped IQ Layer across the storefront and admin dashboard vi
 
 ## Additions & Guardrails Worth Including
 - **Zero New Tables Required:** Operates as stateless Convex actions reading `products` and `orders` via tenant-scoped `internalQuery` helpers (`getActiveCatalogForAi`, `getAdminOpsSnapshot`).
-- **Strict Structured Outputs:** Uses Groq JSON Schema / JSON Object mode (`max_tokens: 450`) so responses parse deterministically into TypeScript types.
+- **Strict Structured Outputs:** Uses Groq JSON Schema / JSON Object mode (`max_tokens: 1200`) so responses parse deterministically into TypeScript types.
 - **Compact Context Payloads:** Passes only essential product/order fields (`_id`, `name`, `price`, `stockQty`, `careLevel`, `light`, `watering`, `keywords`) to keep token usage minimal.
 
 ## Bottlenecks (for Step 2)

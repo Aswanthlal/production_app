@@ -650,15 +650,31 @@ describe("AI IQ Layer Test Suite (TC-AI-01, TC-AI-02, TC-AI-03)", () => {
       expect(fetchSpy).not.toHaveBeenCalled();
     });
 
-    it("handles non-200 Groq HTTP responses cleanly (429 rate limit and 500 server error)", async () => {
+    it("handles non-200 Groq HTTP responses cleanly (404, 429 rate limit, and 500 server error) and logs upstream body", async () => {
       vi.mocked(getAuthUserId).mockResolvedValue(adminUserId);
       const queryCtx = createQueryMockCtx();
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       const adminActionCtx = {
         runQuery: vi.fn(async (_ref: unknown, args: { tenantId: Id<"tenants"> }) => {
           return await getHandler(verifyStoreAdminForAi)(queryCtx, args);
         }),
       };
+
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response('{"error":{"message":"model_not_found"}}', { status: 404 }),
+      );
+
+      await expect(
+        getHandler<{ tenantId: Id<"tenants">; plantName: string }, unknown>(
+          generatePlantDraft,
+        )(adminActionCtx, { tenantId: tenant1Id, plantName: "Snake Plant" }),
+      ).rejects.toThrow(/HTTP 404/);
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        "Groq API error (HTTP 404):",
+        '{"error":{"message":"model_not_found"}}',
+      );
 
       vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
         new Response("Too Many Requests", { status: 429 }),
